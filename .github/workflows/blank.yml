@@ -1,38 +1,46 @@
-name: Android CI
+name: Сборка APK
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches: [main, master]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
+      - name: Скачиваем код
         uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Устанавливаем Java 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          distribution: temurin
+          java-version: 17
 
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
+      - name: Устанавливаем Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: "8.7"
 
-      - name: Build with Gradle
-        run: ./gradlew build
+      - name: Собираем APK
+        run: gradle assembleDebug --no-daemon
 
-      - name: Run unit tests
-        run: ./gradlew test
+      - name: Переименовываем файл
+        run: cp app/build/outputs/apk/debug/app-debug.apk MirTV.apk
 
-      - name: Upload APK
-        if: success()
+      - name: Сохраняем APK как артефакт
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: app/build/outputs/apk/debug/
+          name: MirTV-apk
+          path: MirTV.apk
+
+      - name: Публикуем APK в разделе Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Мир ТВ — сборка ${{ github.run_number }}
+          files: MirTV.apk
